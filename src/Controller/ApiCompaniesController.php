@@ -5,9 +5,10 @@ namespace App\Controller;
 use App\Entity\Company;
 use App\Repository\CompanyRepository;
 use App\Service\SirenService;
+use DateTime;
+use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -64,19 +65,19 @@ class ApiCompaniesController extends AbstractController
                     if (!$company) {
                         $company = new Company();
                         $company->setSiren((int)$data[0]);
-                        $company->setCreatedAt(new \DateTime());
+                        $company->setCreatedAt(new DateTime());
                         $em->persist($company);
                         $nbAdd++;
                     }else{
                         $nbUpdate++;
                     }
-                    $company->setUpdatedAt(new \DateTime());
+                    $company->setUpdatedAt(new DateTime());
                     $company->setName($data[2]);
                     $company->setAddress($data[12]);
                     $company->setCity($data[14]);
                     try{
                         $em->flush();
-                    }catch (\Exception $e) {
+                    }catch (Exception $e) {
                         return new JsonResponse(['response' => 'Une erreur est survenue lors de l\'ajout du numéro ' . $data[0] . 'avec l\'erreur : ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
                     }
                 }
