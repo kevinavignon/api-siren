@@ -123,4 +123,17 @@ class Company
 
         return $this;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'siren' => $this->getSiren(),
+            'name' => $this->getName(),
+            'address' => $this->getAddress(),
+            'city' => $this->getCity(),
+            'createdAt' => $this->getCreatedAt(),
+            'updatedAt' => $this->getUpdatedAt(),
+        ];
+    }
 }
