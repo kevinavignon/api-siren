@@ -51,7 +51,7 @@ class ApiCompaniesControllerTest extends WebTestCase
             [$_FILES]
         );
 
-        $this->assertStringContainsString('Ajout effectué', json_decode($client->getResponse()->getContent())->response);
+        $this->assertStringContainsString('Fichier ajouté', json_decode($client->getResponse()->getContent())->response);
         $this->assertEquals(200, $client->getResponse()->getStatusCode());
     }
 
@@ -79,7 +79,7 @@ class ApiCompaniesControllerTest extends WebTestCase
             [$_FILES]
         );
 
-        $this->assertStringContainsString('Ajout effectué', json_decode($client->getResponse()->getContent())->response);
+        $this->assertStringContainsString('Fichier ajouté', json_decode($client->getResponse()->getContent())->response);
         $this->assertEquals(200, $client->getResponse()->getStatusCode());
     }
 

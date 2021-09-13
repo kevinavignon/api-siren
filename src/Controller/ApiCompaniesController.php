@@ -2,15 +2,17 @@
 
 namespace App\Controller;
 
-use App\Entity\Company;
 use App\Repository\CompanyRepository;
 use App\Service\SirenService;
-use DateTime;
-use Exception;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpKernel\KernelEvents;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Process\Process;
+use Symfony\Contracts\EventDispatcher\Event;
 
 class ApiCompaniesController extends AbstractController
 {
@@ -40,52 +42,31 @@ class ApiCompaniesController extends AbstractController
     /**
      * @Route("/api/companies", name="update_companies", methods={"POST"})
      * @param CompanyRepository $companyRepository
+     * @param EventDispatcherInterface $eventDispatcher
      * @return JsonResponse
      */
-    public function updateCompanies(CompanyRepository $companyRepository): JsonResponse
+    public function updateCompanies(EventDispatcherInterface $eventDispatcher): JsonResponse
     {
-
-        $em = $this->getDoctrine()->getManager();
         //Return error if file not found
         if (!$_FILES || $_FILES['file']['tmp_name'] === ""){
             return new JsonResponse(['response' => 'Fichier manquant'], Response::HTTP_NOT_FOUND);
         }
-        // Get post csv file which contains updated companies and convert each CSV line to array
-        if (($file = fopen($_FILES['file']['tmp_name'], 'r')) !== FALSE) {
-            // Used to verify if this is the first csv file's line
-            $isFirstLineFile = true;
-            $nbAdd = 0;
-            $nbUpdate = 0;
-            while (($data = fgetcsv($file, 1000, ";")) !== FALSE) {
-                // if is first line, do nothing except change to false in order to execute code for other lines
-                if ($isFirstLineFile === true){
-                    $isFirstLineFile = false;
-                }else{
-                    $company = $companyRepository->findOneBy(array('siren' => $data[0]));
-                    if (!$company) {
-                        $company = new Company();
-                        $company->setSiren((int)$data[0]);
-                        $company->setCreatedAt(new DateTime());
-                        $em->persist($company);
-                        $nbAdd++;
-                    }else{
-                        $nbUpdate++;
-                    }
-                    $company->setUpdatedAt(new DateTime());
-                    $company->setName($data[2]);
-                    $company->setAddress($data[12]);
-                    $company->setCity($data[14]);
-                    try{
-                        $em->flush();
-                    }catch (Exception $e) {
-                        return new JsonResponse(['response' => 'Une erreur est survenue lors de l\'ajout du numéro ' . $data[0] . 'avec l\'erreur : ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-                    }
-                }
-            }
+        // Add file to public folder
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $targetDir = $projectDir . "/public/files/";
+        $file = $_FILES['file']['name'];
+        $path = pathinfo($file);
+        $filename = $path['filename'];
+        $ext = $path['extension'];
+        $tempName = $_FILES['file']['tmp_name'];
+        $pathFilenameExt = $targetDir.$filename.".".$ext;
+        move_uploaded_file($tempName,$pathFilenameExt);
+        // dispatch event to process a great number of lines without degrading user experience
+        $eventDispatcher->addListener(KernelEvents::TERMINATE, function (Event $event) use ($file) {
+            $process = Process::fromShellCommandline($this->getParameter('folder') . 'public/../bin/console update:database ' . $file);
+            $process->run();
+        });
 
-            fclose($file);
-            return new JsonResponse(['response' => 'Ajout effectué, ' . $nbAdd . ' ajouts et  ' . $nbUpdate . ' mises-à-jour'], Response::HTTP_OK);
-        }
-        return new JsonResponse(['response' => 'Fichier manquant'], Response::HTTP_NOT_FOUND);
+        return new JsonResponse(['response' => 'Fichier ajouté'], Response::HTTP_OK);
     }
 }
