@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Repository\CompanyRepository;
 use App\Service\SirenService;
-use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -41,7 +40,6 @@ class ApiCompaniesController extends AbstractController
 
     /**
      * @Route("/api/companies", name="update_companies", methods={"POST"})
-     * @param CompanyRepository $companyRepository
      * @param EventDispatcherInterface $eventDispatcher
      * @return JsonResponse
      */
@@ -60,7 +58,11 @@ class ApiCompaniesController extends AbstractController
         $ext = $path['extension'];
         $tempName = $_FILES['file']['tmp_name'];
         $pathFilenameExt = $targetDir.$filename.".".$ext;
-        move_uploaded_file($tempName,$pathFilenameExt);
+        try {
+            move_uploaded_file($tempName,$pathFilenameExt);
+        }catch(\Exception $e){
+            return new JsonResponse(['response' => 'Une erreur est survenue lors de l\'ajout du fichier, veuillez le vérifier et réessayer'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
         // dispatch event to process a great number of lines without degrading user experience
         $eventDispatcher->addListener(KernelEvents::TERMINATE, function (Event $event) use ($file) {
             $process = Process::fromShellCommandline($this->getParameter('folder') . 'public/../bin/console update:database ' . $file);
