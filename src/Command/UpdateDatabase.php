@@ -9,6 +9,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\HttpKernel\KernelInterface;
 
 class UpdateDatabase extends Command
 {
@@ -17,11 +18,13 @@ class UpdateDatabase extends Command
      * @var EntityManagerInterface
      */
     private $em;
+    protected $projectDir;
 
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(KernelInterface $kernel, EntityManagerInterface $em)
     {
 
         parent::__construct();
+        $this->projectDir = $kernel->getProjectDir();
         $this->em = $em;
     }
 
@@ -38,7 +41,7 @@ class UpdateDatabase extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         // Get post csv file which contains updated companies and convert each CSV line to array
-        if (($file = fopen('public/files/' . $input->getArgument('file'), 'r')) !== FALSE) {
+        if (($file = fopen($this->projectDir . '/public/files/' . $input->getArgument('file'), 'r')) !== FALSE) {
             // Used to verify if this is the first csv file's line
             $isFirstLineFile = true;
             $nbAdd = 0;
