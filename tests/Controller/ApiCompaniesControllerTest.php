@@ -3,6 +3,7 @@
 namespace App\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Messenger\Transport\InMemoryTransport;
 
 class ApiCompaniesControllerTest extends WebTestCase
 {
@@ -53,6 +54,9 @@ class ApiCompaniesControllerTest extends WebTestCase
 
         $this->assertStringContainsString('Fichier ajouté', json_decode($client->getResponse()->getContent())->response);
         $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        /* @var InMemoryTransport $transport */
+        $transport = $this->getContainer()->get('messenger.transport.async');
+        $this->assertCount(1, $transport->getSent());
     }
 
     public function testUpdateCompaniesWithNewCompany()
@@ -81,6 +85,9 @@ class ApiCompaniesControllerTest extends WebTestCase
 
         $this->assertStringContainsString('Fichier ajouté', json_decode($client->getResponse()->getContent())->response);
         $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        /* @var InMemoryTransport $transport */
+        $transport = $this->getContainer()->get('messenger.transport.async');
+        $this->assertCount(1, $transport->getSent());
     }
 
     public function testUpdateCompaniesWithoutFile()
@@ -97,6 +104,9 @@ class ApiCompaniesControllerTest extends WebTestCase
 
         $this->assertEquals("Fichier manquant", json_decode($client->getResponse()->getContent())->response);
         $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        /* @var InMemoryTransport $transport */
+        $transport = $this->getContainer()->get('messenger.transport.async');
+        $this->assertCount(0, $transport->getSent());
     }
 
 }
