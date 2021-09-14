@@ -2,16 +2,14 @@
 
 namespace App\Controller;
 
+use App\Message\UpdateBase;
 use App\Repository\CompanyRepository;
+use App\Service\SaveToFolder;
 use App\Service\SirenService;
-use Symfony\Component\HttpKernel\KernelEvents;
-use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Process\Process;
-use Symfony\Contracts\EventDispatcher\Event;
 
 class ApiCompaniesController extends AbstractController
 {
@@ -40,34 +38,22 @@ class ApiCompaniesController extends AbstractController
 
     /**
      * @Route("/api/companies", name="update_companies", methods={"POST"})
-     * @param EventDispatcherInterface $eventDispatcher
+     * @param SaveToFolder $folder
      * @return JsonResponse
      */
-    public function updateCompanies(EventDispatcherInterface $eventDispatcher): JsonResponse
+    public function updateCompanies(SaveToFolder $folder): JsonResponse
     {
         //Return error if file not found
         if (!$_FILES || $_FILES['file']['tmp_name'] === ""){
             return new JsonResponse(['response' => 'Fichier manquant'], Response::HTTP_NOT_FOUND);
         }
+        $file = $_FILES["file"];
         // Add file to public folder
-        $projectDir = $this->getParameter('kernel.project_dir');
-        $targetDir = $projectDir . "/public/files/";
-        $file = $_FILES['file']['name'];
-        $path = pathinfo($file);
-        $filename = $path['filename'];
-        $ext = $path['extension'];
-        $tempName = $_FILES['file']['tmp_name'];
-        $pathFilenameExt = $targetDir.$filename.".".$ext;
-        try {
-            move_uploaded_file($tempName,$pathFilenameExt);
-        }catch(\Exception $e){
+        if (!$folder->saveToFolder($file, $this->getParameter('kernel.project_dir'))){
             return new JsonResponse(['response' => 'Une erreur est survenue lors de l\'ajout du fichier, veuillez le vérifier et réessayer'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
         // dispatch event to process a great number of lines without degrading user experience
-        $eventDispatcher->addListener(KernelEvents::TERMINATE, function (Event $event) use ($file) {
-            $process = Process::fromShellCommandline($this->getParameter('folder') . 'public/../bin/console update:database ' . $file);
-            $process->run();
-        });
+        $this->dispatchMessage(new UpdateBase($file['name'], $this->getParameter('folder')));
 
         return new JsonResponse(['response' => 'Fichier ajouté'], Response::HTTP_OK);
     }
